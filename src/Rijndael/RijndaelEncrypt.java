@@ -22,7 +22,15 @@ public class RijndaelEncrypt {
             0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
     };
 
-    public static void subBytes(int [][] input){
+    private static final int[][] CX = {
+            {2, 3, 1, 1},
+            {1, 2, 3, 1},
+            {1, 1, 2, 3},
+            {3, 1, 1, 2},
+
+    };
+
+    public static void subBytes(int[][] input) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 input[i][j] = SBOX[input[i][j]];
@@ -30,14 +38,41 @@ public class RijndaelEncrypt {
         }
     }
 
-    public static void shiftRows(int [][] input){
+    public static void shiftRows(int[][] input) {
         int[] newRow = new int[4];
         for (int i = 1; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                newRow[j] = input[i][(j+i)%4];
+                newRow[j] = input[i][(j + i) % 4];
             }
-            input[i]  = Arrays.copyOf(newRow, newRow.length);
+            input[i] = Arrays.copyOf(newRow, newRow.length);
         }
     }
 
+    public static void mixColumns(int[][] input) {
+        for (int i = 0; i < 4; i++) {
+            int[] column = new int[4];
+            for (int j = 0; j < 4; j++) {
+                int r = 0;
+                for (int k = 0; k < 4; k++) {
+                    r^=mult(input[k][i], CX[j][k]);
+                }
+                column[j] = r;
+            }
+            for (int j = 0; j < 4; j++) {
+                input[j][i] = column[j];
+            }
+        }
+    }
+
+    private static int mult(int a, int c){
+        int result;
+        if (c<3)
+        result = a * c;
+        else result = a * (c-1) ^ a;
+        if (result>255) {
+            result-=0x100;
+            result = result ^ 0x1b;
+        }
+        return result;
+    }
 }
