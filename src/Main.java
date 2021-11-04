@@ -4,15 +4,16 @@ public class Main {
 
     public static void main(String[] args) {
 	    int[][] a = {
-                {0xd4, 0xe0, 0xb8, 0x1e},
-                {0xbf, 0xb4, 0x41, 0x27},
-                {0x5d, 0x52, 0x11, 0x98},
-                {0x30, 0xae, 0xf1, 0xe5}
+                {0x2b, 0x28, 0xab, 0x09},
+                {0x7e, 0xae, 0xf7, 0xcf},
+                {0x15, 0xd2, 0x15, 0x4f},
+                {0x16, 0xa6, 0x88, 0x3c}
         };
-        RijndaelEncrypt.mixColumns(a);
+//        RijndaelEncrypt.mixColumns(a);
+        RijndaelEncrypt.keyExpansion(a);
         for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                System.out.print(Integer.toHexString(a[i][j]) + " ");
+            for (int j = 0; j < 44; j++) {
+                System.out.print(Integer.toHexString(RijndaelEncrypt.expandedKey[i][j]) + " ");
             }
             System.out.println();
         }

@@ -30,49 +30,116 @@ public class RijndaelEncrypt {
 
     };
 
-    public static void subBytes(int[][] input) {
+    private static final int[][] RCON = {
+            {0x01, 0x00, 0x00, 0x00},
+            {0x02, 0x00, 0x00, 0x00},
+            {0x04, 0x00, 0x00, 0x00},
+            {0x08, 0x00, 0x00, 0x00},
+            {0x10, 0x00, 0x00, 0x00},
+            {0x20, 0x00, 0x00, 0x00},
+            {0x40, 0x00, 0x00, 0x00},
+            {0x80, 0x00, 0x00, 0x00},
+            {0x1b, 0x00, 0x00, 0x00},
+            {0x36, 0x00, 0x00, 0x00}
+    };
+
+    public static int[][] expandedKey = new int[4][44];
+
+    private static void subBytes(int[][] state) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                input[i][j] = SBOX[input[i][j]];
+                state[i][j] = SBOX[state[i][j]];
             }
         }
     }
 
-    public static void shiftRows(int[][] input) {
+    private static void subBytes(int[] input) {
+        for (int i = 0; i < 4; i++) {
+            input[i] = SBOX[input[i]];
+        }
+    }
+
+    private static void shiftRows(int[][] state) {
         int[] newRow = new int[4];
         for (int i = 1; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                newRow[j] = input[i][(j + i) % 4];
+                newRow[j] = state[i][(j + i) % 4];
             }
-            input[i] = Arrays.copyOf(newRow, newRow.length);
+            state[i] = Arrays.copyOf(newRow, newRow.length);
         }
     }
 
-    public static void mixColumns(int[][] input) {
+    private static void mixColumns(int[][] state) {
         for (int i = 0; i < 4; i++) {
             int[] column = new int[4];
             for (int j = 0; j < 4; j++) {
                 int r = 0;
                 for (int k = 0; k < 4; k++) {
-                    r^=mult(input[k][i], CX[j][k]);
+                    r ^= mult(state[k][i], CX[j][k]);
                 }
                 column[j] = r;
             }
             for (int j = 0; j < 4; j++) {
-                input[j][i] = column[j];
+                state[j][i] = column[j];
             }
         }
     }
 
-    private static int mult(int a, int c){
+    public static void keyExpansion(int[][] cipherKey) {
+        for (int i = 0; i < 4; i++) {
+            System.arraycopy(cipherKey[i], 0, expandedKey[i], 0, 4);
+        }
+        for (int i = 4; i < 44; i += 4) {
+            int[] curWord = rotWord(expandedKey, i - 1);
+            subBytes(curWord);
+            curWord = xorWords(expandedKey, i - 4, curWord, i / 4 - 1);
+            for (int j = 0; j < 4; j++) {
+                expandedKey[j][i] = curWord[j];
+            }
+            for (int j = 1; j < 4; j++) {
+                curWord = xorWords(expandedKey, i + j - 4, i + j - 1);
+                for (int k = 0; k < 4; k++) {
+                    expandedKey[k][i+j] = curWord[k];
+                }
+            }
+        }
+    }
+
+    private static int[] xorWords(int[][] expandedKey, int columnNum, int[] word, int rconNum) {
+        int[] result = new int[4];
+        for (int i = 0; i < 4; i++) {
+            result[i] = expandedKey[i][columnNum] ^ word[i] ^ RCON[rconNum][i];
+        }
+        return result;
+    }
+
+    private static int[] xorWords(int[][] expandedKey, int columnNum1, int columnNum2){
+        int[] result = new int[4];
+        for (int i = 0; i < 4; i++) {
+            result[i] = expandedKey[i][columnNum1] ^ expandedKey[i][columnNum2];
+        }
+        return result;
+    }
+
+    private static int[] rotWord(int[][] input, int columnNum) {
+        int[] rotatedColumn = new int[4];
+        for (int i = 0; i < 4; i++) {
+            rotatedColumn[i] = input[(i + 1) % 4][columnNum];
+        }
+        return rotatedColumn;
+    }
+
+    private static int mult(int a, int c) {
         int result;
-        if (c<3)
-        result = a * c;
-        else result = a * (c-1) ^ a;
-        if (result>255) {
-            result-=0x100;
+        if (c < 3)
+            result = a * c;
+        else result = a * (c - 1) ^ a;
+        if (result > 255) {
+            result -= 0x100;
             result = result ^ 0x1b;
         }
         return result;
     }
+
+
 }
