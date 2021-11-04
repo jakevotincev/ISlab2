@@ -43,7 +43,21 @@ public class RijndaelEncrypt {
             {0x36, 0x00, 0x00, 0x00}
     };
 
-    public static int[][] expandedKey = new int[4][44];
+    private static final int[][] expandedKey = new int[4][44];
+
+    public static void encrypt(int[][] state, int[][] cipherKey) {
+        keyExpansion(cipherKey);
+        addRoundKey(state, 0);
+        for (int i = 1; i < 10; i++) {
+            subBytes(state);
+            shiftRows(state);
+            mixColumns(state);
+            addRoundKey(state, i);
+        }
+        subBytes(state);
+        shiftRows(state);
+        addRoundKey(state, 10);
+    }
 
     private static void subBytes(int[][] state) {
         for (int i = 0; i < 4; i++) {
@@ -85,7 +99,15 @@ public class RijndaelEncrypt {
         }
     }
 
-    public static void keyExpansion(int[][] cipherKey) {
+    private static void addRoundKey(int[][] state, int keyNum) {
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                state[i][j] ^= expandedKey[i][keyNum * 4 + j];
+            }
+        }
+    }
+
+    private static void keyExpansion(int[][] cipherKey) {
         for (int i = 0; i < 4; i++) {
             System.arraycopy(cipherKey[i], 0, expandedKey[i], 0, 4);
         }
@@ -99,7 +121,7 @@ public class RijndaelEncrypt {
             for (int j = 1; j < 4; j++) {
                 curWord = xorWords(expandedKey, i + j - 4, i + j - 1);
                 for (int k = 0; k < 4; k++) {
-                    expandedKey[k][i+j] = curWord[k];
+                    expandedKey[k][i + j] = curWord[k];
                 }
             }
         }
@@ -113,7 +135,7 @@ public class RijndaelEncrypt {
         return result;
     }
 
-    private static int[] xorWords(int[][] expandedKey, int columnNum1, int columnNum2){
+    private static int[] xorWords(int[][] expandedKey, int columnNum1, int columnNum2) {
         int[] result = new int[4];
         for (int i = 0; i < 4; i++) {
             result[i] = expandedKey[i][columnNum1] ^ expandedKey[i][columnNum2];
