@@ -1,6 +1,12 @@
 package Rijndael;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class RijndaelEncrypt {
     private static final int[] SBOX = {
@@ -69,6 +75,22 @@ public class RijndaelEncrypt {
     };
 
     private static final int[][] expandedKey = new int[4][44];
+
+    public static String encryptFileModeOFB(String inputFile, String outputFile, String key) throws IOException {
+        int[][] vector = generateIV();
+        int[][] cypherKey = convertToSquare(key);
+        List<String> text = readFile(inputFile);
+        List<String> encryptedText = new ArrayList<>();
+        for (String state : text) {
+            int[][] result;
+            encrypt(vector, cypherKey);
+            result = xorMatrixes(vector, convertToSquare(state));
+            encryptedText.add(convertToString(result));
+        }
+        writeFile(outputFile, encryptedText);
+
+        return convertToString(vector);
+    }
 
     public static void encrypt(int[][] state, int[][] cipherKey) {
         keyExpansion(cipherKey);
@@ -208,6 +230,16 @@ public class RijndaelEncrypt {
         return result;
     }
 
+    private static int[][] xorMatrixes(int[][] a, int[][] b) {
+        int[][] result = new int[4][4];
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                result[i][j] = a[i][j] ^ b[i][j];
+            }
+        }
+        return result;
+    }
+
     private static int[] rotWord(int[][] input, int columnNum) {
         int[] rotatedColumn = new int[4];
         for (int i = 0; i < 4; i++) {
@@ -253,5 +285,80 @@ public class RijndaelEncrypt {
             a %= 0x100;
         }
         return a;
+    }
+
+    private static int[][] generateIV() {
+        int[][] vector = new int[4][4];
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                vector[i][j] = (int) (Math.random() * 255);
+            }
+        }
+        return vector;
+    }
+
+    //метод для преобразования строки в матрицу, строка не больше 8 байт
+    public static int[][] convertToSquare(String text) {
+        if (text.length()>8) throw new IllegalArgumentException(text);
+        int[][] matrix = new int[4][4];
+        byte[] byteStr = text.getBytes();
+        int index = 0;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                if (index < byteStr.length)
+                    matrix[i][j] = unsignedToBytes(byteStr[index]);
+                else matrix[i][j] = 0;
+                index++;
+            }
+        }
+        return matrix;
+    }
+
+    //метод для преобразования матрицы в строку
+    public static String convertToString(int[][] matrix) {
+        String result;
+        byte[] byteResult = new byte[16];
+        int index = 0;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                byteResult[index] = (byte) matrix[i][j];
+                index++;
+            }
+        }
+        result = new String(byteResult);
+        return result;
+    }
+
+    private static List<String> readFile(String filename) throws IOException {
+        List<String> text = new ArrayList<>();
+        FileReader fileReader = new FileReader(filename);
+        StringBuilder stringBuilder = new StringBuilder();
+        int c = 0;
+        while (c != -1) {
+            int count = 0;
+            while (count < 8 && (c = fileReader.read()) != -1) {
+                stringBuilder.append((char) c);
+                count++;
+            }
+
+            text.add(stringBuilder.toString());
+
+            stringBuilder.setLength(0);
+        }
+        fileReader.close();
+        return text;
+    }
+
+    private static void writeFile(String fileName, List<String> text) throws IOException {
+        File file = new File(fileName);
+        FileWriter fileWriter = new FileWriter(file, true);
+        for (String s : text) {
+            fileWriter.append(s);
+        }
+        fileWriter.close();
+    }
+
+    private static int unsignedToBytes(byte b) {
+        return b & 0xFF;
     }
 }
