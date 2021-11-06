@@ -80,7 +80,12 @@ public class RijndaelEncrypt {
 
     public static void decryptFileModeOFB(String inputFile, String outputFile, String key, String vectorFile) throws IOException {
         int[][] vector;
-        List<int[][]> vectorList = readFile(vectorFile);
+        List<int[][]> vectorList;
+        try {
+            vectorList = readFile(vectorFile);
+        } catch (FileNotFoundException e) {
+            throw new FileNotFoundException("Файл " + vectorFile + " не найден");
+        }
         Optional<int[][]> optionalVector = vectorList.stream().findFirst();
         if (optionalVector.isPresent())
             vector = optionalVector.get();
@@ -368,7 +373,6 @@ public class RijndaelEncrypt {
             if (!countZeros) zeroCount = 0;
             fos.write(buffer, 0, buffer.length - zeroCount);
         }
-
     }
 
     private static int unsignedToBytes(byte b) {
