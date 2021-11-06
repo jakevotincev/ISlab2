@@ -1,12 +1,7 @@
 package Rijndael;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
 public class RijndaelEncrypt {
     private static final int[] SBOX = {
@@ -76,20 +71,35 @@ public class RijndaelEncrypt {
 
     private static final int[][] expandedKey = new int[4][44];
 
-    public static String encryptFileModeOFB(String inputFile, String outputFile, String key) throws IOException {
+    public static void encryptFileModeOFB(String inputFile, String outputFile, String key) throws IOException {
         int[][] vector = generateIV();
+        writeFile("vector.txt", Collections.singletonList(vector), false);
+        List<int[][]> encryptedText = encryptOFB(inputFile, key, vector);
+        writeFile(outputFile, encryptedText, false);
+    }
+
+    public static void decryptFileModeOFB(String inputFile, String outputFile, String key, String vectorFile) throws IOException {
+        int[][] vector;
+        List<int[][]> vectorList = readFile(vectorFile);
+        Optional<int[][]> optionalVector = vectorList.stream().findFirst();
+        if (optionalVector.isPresent())
+            vector = optionalVector.get();
+        else throw new IllegalArgumentException("empty vector");
+        List<int[][]> decryptedText = encryptOFB(inputFile, key, vector);
+        writeFile(outputFile, decryptedText, true);
+    }
+
+    private static List<int[][]> encryptOFB(String inputFile, String key, int[][] vector) throws IOException {
         int[][] cypherKey = convertToSquare(key);
-        List<String> text = readFile(inputFile);
-        List<String> encryptedText = new ArrayList<>();
-        for (String state : text) {
+        List<int[][]> text = readFile(inputFile);
+        List<int[][]> decryptedText = new ArrayList<>();
+        for (int[][] state : text) {
             int[][] result;
             encrypt(vector, cypherKey);
-            result = xorMatrixes(vector, convertToSquare(state));
-            encryptedText.add(convertToString(result));
+            result = xorMatrixes(vector, state);
+            decryptedText.add(result);
         }
-        writeFile(outputFile, encryptedText);
-
-        return convertToString(vector);
+        return decryptedText;
     }
 
     public static void encrypt(int[][] state, int[][] cipherKey) {
@@ -298,8 +308,8 @@ public class RijndaelEncrypt {
     }
 
     //метод для преобразования строки в матрицу, строка не больше 8 байт
-    public static int[][] convertToSquare(String text) {
-        if (text.length()>8) throw new IllegalArgumentException(text);
+    private static int[][] convertToSquare(String text) {
+        if (text.length() > 8) throw new IllegalArgumentException(text);
         int[][] matrix = new int[4][4];
         byte[] byteStr = text.getBytes();
         int index = 0;
@@ -314,48 +324,51 @@ public class RijndaelEncrypt {
         return matrix;
     }
 
-    //метод для преобразования матрицы в строку
-    public static String convertToString(int[][] matrix) {
-        String result;
-        byte[] byteResult = new byte[16];
-        int index = 0;
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                byteResult[index] = (byte) matrix[i][j];
-                index++;
-            }
-        }
-        result = new String(byteResult);
-        return result;
-    }
-
-    private static List<String> readFile(String filename) throws IOException {
-        List<String> text = new ArrayList<>();
-        FileReader fileReader = new FileReader(filename);
-        StringBuilder stringBuilder = new StringBuilder();
-        int c = 0;
-        while (c != -1) {
-            int count = 0;
-            while (count < 8 && (c = fileReader.read()) != -1) {
-                stringBuilder.append((char) c);
-                count++;
+    private static List<int[][]> readFile(String filename) throws IOException {
+        List<int[][]> text = new ArrayList<>();
+        try (FileInputStream fin = new FileInputStream(filename)) {
+            int i;
+            List<Integer> buffer = new ArrayList<>();
+            while ((i = fin.read()) != -1) {
+                buffer.add(i);
             }
 
-            text.add(stringBuilder.toString());
+            Iterator<Integer> iterator = buffer.iterator();
+            while (iterator.hasNext()) {
+                int[][] state = new int[4][4];
+                for (int j = 0; j < 4; j++) {
+                    for (int k = 0; k < 4; k++) {
+                        if (iterator.hasNext())
+                            state[j][k] = iterator.next();
 
-            stringBuilder.setLength(0);
+                    }
+                }
+                text.add(state);
+            }
         }
-        fileReader.close();
         return text;
     }
 
-    private static void writeFile(String fileName, List<String> text) throws IOException {
-        File file = new File(fileName);
-        FileWriter fileWriter = new FileWriter(file, true);
-        for (String s : text) {
-            fileWriter.append(s);
+
+    private static void writeFile(String fileName, List<int[][]> text, boolean countZeros) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(fileName)) {
+            byte[] buffer = new byte[text.size() * 16];
+            int index = 0;
+            int zeroCount = 0;
+            for (int[][] matrix : text) {
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        if (matrix[i][j] == 0)
+                            zeroCount++;
+                        buffer[index] = (byte) matrix[i][j];
+                        index++;
+                    }
+                }
+            }
+            if (!countZeros) zeroCount = 0;
+            fos.write(buffer, 0, buffer.length - zeroCount);
         }
-        fileWriter.close();
+
     }
 
     private static int unsignedToBytes(byte b) {
