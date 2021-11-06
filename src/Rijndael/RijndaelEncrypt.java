@@ -89,11 +89,12 @@ public class RijndaelEncrypt {
         Optional<int[][]> optionalVector = vectorList.stream().findFirst();
         if (optionalVector.isPresent())
             vector = optionalVector.get();
-        else throw new IllegalArgumentException("empty vector");
+        else throw new IllegalArgumentException("Пустой фалй вектора");
         List<int[][]> decryptedText = encryptOFB(inputFile, key, vector);
         writeFile(outputFile, decryptedText, true);
     }
 
+    //метод шифрования OFB (применяется для шифрования и расшифрования)
     private static List<int[][]> encryptOFB(String inputFile, String key, int[][] vector) throws IOException {
         int[][] cypherKey = convertToSquare(key);
         List<int[][]> text = readFile(inputFile);
@@ -107,6 +108,7 @@ public class RijndaelEncrypt {
         return decryptedText;
     }
 
+    //метод шифрования Rijndael
     public static void encrypt(int[][] state, int[][] cipherKey) {
         keyExpansion(cipherKey);
         addRoundKey(state, 0);
@@ -121,6 +123,7 @@ public class RijndaelEncrypt {
         addRoundKey(state, 10);
     }
 
+    //метод расшифрования Rijndael
     public static void decrypt(int[][] state, int[][] cipherKey) {
         keyExpansion(cipherKey);
         addRoundKey(state, 10);
@@ -163,6 +166,7 @@ public class RijndaelEncrypt {
         }
     }
 
+    //метод для смещения массива длины n вправо на d позиций
     private static void rightRotate(int[] arr, int d, int n) {
         int[] temp = new int[n - d];
         if (n - d >= 0) System.arraycopy(arr, 0, temp, 0, n - d);
@@ -229,6 +233,7 @@ public class RijndaelEncrypt {
         }
     }
 
+    //xor трех колонок (колонка columnNum из expandedKey xor word xor колонка rconNum из RCON)
     private static int[] xorWords(int[][] expandedKey, int columnNum, int[] word, int rconNum) {
         int[] result = new int[4];
         for (int i = 0; i < 4; i++) {
@@ -237,6 +242,7 @@ public class RijndaelEncrypt {
         return result;
     }
 
+    //xor двух колонок матрицы
     private static int[] xorWords(int[][] expandedKey, int columnNum1, int columnNum2) {
         int[] result = new int[4];
         for (int i = 0; i < 4; i++) {
@@ -245,6 +251,7 @@ public class RijndaelEncrypt {
         return result;
     }
 
+    //xor двух матриц
     private static int[][] xorMatrixes(int[][] a, int[][] b) {
         int[][] result = new int[4][4];
         for (int i = 0; i < 4; i++) {
@@ -263,6 +270,7 @@ public class RijndaelEncrypt {
         return rotatedColumn;
     }
 
+    //умножение по правилам математики Rijndael
     private static int mult(int a, int c) {
         int result;
         switch (c) {
@@ -293,6 +301,7 @@ public class RijndaelEncrypt {
         return result;
     }
 
+    //умножение на 2 по правилам математики Rijndael
     private static int mul2(int a) {
         if (a < 0x80) a *= 2;
         else {
@@ -302,6 +311,7 @@ public class RijndaelEncrypt {
         return a;
     }
 
+    //метод для генерации вектора инициализации
     private static int[][] generateIV() {
         int[][] vector = new int[4][4];
         for (int i = 0; i < 4; i++) {
@@ -329,6 +339,7 @@ public class RijndaelEncrypt {
         return matrix;
     }
 
+    //побойтовое чтение файла
     private static List<int[][]> readFile(String filename) throws IOException {
         List<int[][]> text = new ArrayList<>();
         try (FileInputStream fin = new FileInputStream(filename)) {
@@ -354,7 +365,7 @@ public class RijndaelEncrypt {
         return text;
     }
 
-
+    //побайтовая запись в файл
     private static void writeFile(String fileName, List<int[][]> text, boolean countZeros) throws IOException {
         try (FileOutputStream fos = new FileOutputStream(fileName)) {
             byte[] buffer = new byte[text.size() * 16];
@@ -375,6 +386,7 @@ public class RijndaelEncrypt {
         }
     }
 
+    //преобразование byte в unsigned byte
     private static int unsignedToBytes(byte b) {
         return b & 0xFF;
     }
